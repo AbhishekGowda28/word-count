@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   validateInput,
   sanitizeText,
@@ -82,16 +82,22 @@ describe("Security Utils", () => {
   });
 
   describe("rateLimitCheck", () => {
-    it("should allow first request", () => {
+    it("should allow first request", async () => {
+      // Wait to ensure clean state
+      await new Promise((resolve) => setTimeout(resolve, 150));
       expect(rateLimitCheck()).toBe(true);
     });
 
-    it("should block rapid consecutive requests", () => {
+    it("should block rapid consecutive requests", async () => {
+      // Wait to ensure clean state
+      await new Promise((resolve) => setTimeout(resolve, 150));
       rateLimitCheck(); // First call
       expect(rateLimitCheck()).toBe(false); // Should be blocked
     });
 
     it("should allow request after sufficient time delay", async () => {
+      // Wait to ensure clean state
+      await new Promise((resolve) => setTimeout(resolve, 150));
       rateLimitCheck(); // First call
 
       // Wait for rate limit to reset (110ms > 100ms minimum interval)
@@ -209,11 +215,20 @@ describe("Security Utils", () => {
       expect(() => validateInput(specialChars)).not.toThrow();
     });
 
-    it("should handle rate limiting edge cases", () => {
-      // Test multiple rapid calls
-      expect(rateLimitCheck()).toBe(true);  // First call allowed
+    it("should handle rate limiting edge cases", async () => {
+      // Ensure we start with a clean rate limit state
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // Test multiple rapid calls in isolation
+      expect(rateLimitCheck()).toBe(true); // First call allowed
       expect(rateLimitCheck()).toBe(false); // Second call blocked
       expect(rateLimitCheck()).toBe(false); // Third call blocked
+
+      // Wait for rate limit to reset
+      await new Promise((resolve) => setTimeout(resolve, 110));
+
+      // Should be allowed again after waiting
+      expect(rateLimitCheck()).toBe(true);
     });
 
     it("should handle sanitization of complex input", () => {

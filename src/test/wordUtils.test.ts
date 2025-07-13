@@ -87,14 +87,14 @@ describe("Word Processing Utilities", () => {
     it("should handle input with only whitespace and punctuation", () => {
       const input = "   !!!   @@@   ###   ";
       const result = processText(input);
-      
+
       expect(result).toEqual([]);
     });
 
     it("should handle input with very short words", () => {
       const input = "a b c d e";
       const result = processText(input);
-      
+
       // All words are too short and should be filtered out
       expect(result).toEqual([]);
     });
@@ -102,9 +102,9 @@ describe("Word Processing Utilities", () => {
     it("should handle mixed short and long words", () => {
       const input = "a very good test with some short words like a an the";
       const result = processText(input);
-      
+
       // Should only keep words longer than 2 characters
-      const validWords = result.map(w => w.text);
+      const validWords = result.map((w) => w.text);
       expect(validWords).not.toContain("a");
       expect(validWords).not.toContain("an");
       expect(validWords).toContain("very");
@@ -121,9 +121,9 @@ describe("Word Processing Utilities", () => {
     it("should handle text with numbers and special characters", () => {
       const input = "test123 hello-world user@email.com version2.0";
       const result = processText(input);
-      
+
       expect(result.length).toBeGreaterThan(0);
-      result.forEach(word => {
+      result.forEach((word) => {
         expect(word.text.length).toBeGreaterThan(2);
         expect(word.weight).toBeGreaterThan(0);
       });
