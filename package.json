@@ -11,6 +11,7 @@
         "test": "vitest",
         "test:ui": "vitest --ui",
         "test:coverage": "vitest --coverage",
+        "test:components": "vitest src/test/components",
         "audit": "npm audit --audit-level moderate",
         "audit-fix": "npm audit fix",
         "security-check": "npm audit && npm outdated",
