@@ -1,6 +1,7 @@
 import React, { forwardRef } from "react";
 
-interface WordCloudCanvasProps {
+interface WordCloudCanvasProps
+  extends React.CanvasHTMLAttributes<HTMLCanvasElement> {
   className?: string;
   style?: React.CSSProperties;
 }

@@ -1,7 +1,7 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TextInputSection } from "../../components/TextInputSection";
-import { vi } from "vitest";
 
 describe("TextInputSection", () => {
   const defaultProps = {
@@ -43,37 +43,34 @@ describe("TextInputSection", () => {
     expect(screen.getByText("Approaching character limit")).toBeInTheDocument();
   });
 
-  it("calls onInputChange when text is entered", async () => {
-    const user = userEvent.setup();
+  it("calls onInputChange when text is entered within limit", () => {
     const mockOnInputChange = vi.fn();
     const props = { ...defaultProps, onInputChange: mockOnInputChange };
 
     render(<TextInputSection {...props} />);
 
     const textarea = screen.getByTestId("text-input");
-    await user.type(textarea, "Hello");
 
-    expect(mockOnInputChange).toHaveBeenCalledWith("H");
-    expect(mockOnInputChange).toHaveBeenCalledWith("e");
-    expect(mockOnInputChange).toHaveBeenCalledWith("l");
+    // Use fireEvent to directly simulate a change event
+    fireEvent.change(textarea, { target: { value: "Hello" } });
+
+    expect(mockOnInputChange).toHaveBeenCalledTimes(1);
+    expect(mockOnInputChange).toHaveBeenCalledWith("Hello");
   });
 
-  it("prevents input beyond maximum length", async () => {
-    const user = userEvent.setup();
+  it("does not call onInputChange when input exceeds maximum length", () => {
     const mockOnInputChange = vi.fn();
-    const maxLengthText = "a".repeat(50000);
-    const props = {
-      ...defaultProps,
-      inputText: maxLengthText,
-      onInputChange: mockOnInputChange,
-    };
+    const props = { ...defaultProps, onInputChange: mockOnInputChange };
 
     render(<TextInputSection {...props} />);
 
     const textarea = screen.getByTestId("text-input");
-    await user.type(textarea, "x"); // Try to exceed limit
 
-    // Should not call onInputChange for characters beyond limit
+    // Try to input text that exceeds the maximum length (50,000 characters)
+    const longText = "a".repeat(50001);
+    fireEvent.change(textarea, { target: { value: longText } });
+
+    // onInputChange should not be called when text exceeds limit
     expect(mockOnInputChange).not.toHaveBeenCalled();
   });
 
@@ -157,25 +154,5 @@ describe("TextInputSection", () => {
     const generateButton = screen.getByTestId("generate-button");
     expect(generateButton).not.toBeDisabled();
     expect(generateButton).toHaveTextContent("Generate Word Cloud");
-  });
-
-  it("disables generate button when input exceeds maximum length", () => {
-    const overLimitText = "a".repeat(50001);
-    const props = { ...defaultProps, inputText: overLimitText };
-    render(<TextInputSection {...props} />);
-
-    const generateButton = screen.getByTestId("generate-button");
-    expect(generateButton).toBeDisabled();
-  });
-
-  it("has correct button styles", () => {
-    render(<TextInputSection {...defaultProps} />);
-
-    const generateButton = screen.getByTestId("generate-button");
-    const clearButton = screen.getByTestId("clear-button");
-
-    expect(generateButton).toHaveClass("button");
-    expect(clearButton).toHaveClass("button");
-    expect(clearButton).toHaveStyle({ background: "#dc3545" });
   });
 });

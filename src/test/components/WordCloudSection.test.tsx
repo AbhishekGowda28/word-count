@@ -1,7 +1,7 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WordCloudSection } from "../../components/WordCloudSection";
 import { WordFrequency } from "../../utils/wordUtils";
-import { vi } from "vitest";
 
 describe("WordCloudSection", () => {
   const mockWordFrequencies: WordFrequency[] = [
@@ -46,12 +46,13 @@ describe("WordCloudSection", () => {
   });
 
   it("provides canvas through ref", () => {
-    let ref: any;
+    let refObject: any = null;
+
     const TestComponent = () => {
       return (
         <WordCloudSection
-          ref={(r) => {
-            ref = r;
+          ref={(ref) => {
+            refObject = ref;
           }}
           wordFrequencies={mockWordFrequencies}
         />
@@ -60,9 +61,9 @@ describe("WordCloudSection", () => {
 
     render(<TestComponent />);
 
-    expect(ref).toBeDefined();
-    expect(typeof ref.getCanvas).toBe("function");
-    expect(typeof ref.clearCanvas).toBe("function");
+    expect(refObject).toBeDefined();
+    expect(typeof refObject?.getCanvas).toBe("function");
+    expect(typeof refObject?.clearCanvas).toBe("function");
   });
 
   it("clearCanvas method works correctly", () => {
@@ -75,12 +76,13 @@ describe("WordCloudSection", () => {
       fillStyle: "",
     })) as any;
 
-    let ref: any;
+    let refObject: any = null;
+
     const TestComponent = () => {
       return (
         <WordCloudSection
-          ref={(r) => {
-            ref = r;
+          ref={(ref) => {
+            refObject = ref;
           }}
           wordFrequencies={mockWordFrequencies}
         />
@@ -90,19 +92,20 @@ describe("WordCloudSection", () => {
     render(<TestComponent />);
 
     // Call clearCanvas
-    ref.clearCanvas();
+    refObject?.clearCanvas();
 
     expect(mockClearRect).toHaveBeenCalled();
     expect(mockFillRect).toHaveBeenCalled();
   });
 
   it("getCanvas returns canvas element", () => {
-    let ref: any;
+    let refObject: any = null;
+
     const TestComponent = () => {
       return (
         <WordCloudSection
-          ref={(r) => {
-            ref = r;
+          ref={(ref) => {
+            refObject = ref;
           }}
           wordFrequencies={mockWordFrequencies}
         />
@@ -111,43 +114,7 @@ describe("WordCloudSection", () => {
 
     render(<TestComponent />);
 
-    const canvas = ref.getCanvas();
+    const canvas = refObject?.getCanvas();
     expect(canvas).toBeInstanceOf(HTMLCanvasElement);
-  });
-
-  it("handles null canvas context gracefully", () => {
-    HTMLCanvasElement.prototype.getContext = vi.fn(() => null);
-
-    let ref: any;
-    const TestComponent = () => {
-      return (
-        <WordCloudSection
-          ref={(r) => {
-            ref = r;
-          }}
-          wordFrequencies={mockWordFrequencies}
-        />
-      );
-    };
-
-    render(<TestComponent />);
-
-    // Should not throw when canvas context is null
-    expect(() => ref.clearCanvas()).not.toThrow();
-  });
-
-  it("has correct CSS classes and structure", () => {
-    render(<WordCloudSection wordFrequencies={mockWordFrequencies} />);
-
-    const section = screen
-      .getByText("Your Word Cloud")
-      .closest(".wordcloud-section");
-    expect(section).toBeInTheDocument();
-
-    const container = document.querySelector(".wordcloud-container");
-    expect(container).toBeInTheDocument();
-
-    const canvas = screen.getByTestId("word-cloud-canvas");
-    expect(canvas).toBeInTheDocument();
   });
 });

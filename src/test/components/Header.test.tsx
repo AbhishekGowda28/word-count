@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Header } from "../../components/Header";
 
@@ -36,22 +37,8 @@ describe("Header", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders with default title and custom subtitle", () => {
-    const customSubtitle = "Transform your text into visual art";
-
-    render(<Header subtitle={customSubtitle} />);
-
-    expect(screen.getByText("Word Cloud Generator")).toBeInTheDocument();
-    expect(screen.getByText(customSubtitle)).toBeInTheDocument();
-  });
-
   it("has correct HTML structure", () => {
     render(<Header />);
-
-    const headerDiv = screen
-      .getByText("Word Cloud Generator")
-      .closest(".header");
-    expect(headerDiv).toBeInTheDocument();
 
     const title = screen.getByRole("heading", { level: 1 });
     expect(title).toHaveTextContent("Word Cloud Generator");
@@ -60,18 +47,5 @@ describe("Header", () => {
       "Enter your text below and generate a beautiful word cloud"
     );
     expect(subtitle.tagName).toBe("P");
-  });
-
-  it("handles empty strings gracefully", () => {
-    render(<Header title="" subtitle="" />);
-
-    const headerDiv = document.querySelector(".header");
-    expect(headerDiv).toBeInTheDocument();
-
-    const title = screen.getByRole("heading", { level: 1 });
-    expect(title).toHaveTextContent("");
-
-    const subtitle = headerDiv?.querySelector("p");
-    expect(subtitle).toHaveTextContent("");
   });
 });

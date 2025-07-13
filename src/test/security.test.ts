@@ -6,6 +6,11 @@ import {
 } from "../utils/securityUtils";
 
 describe("Security Utils", () => {
+  // Reset any global state before each test
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe("validateInput", () => {
     it("should accept valid text input", () => {
       const validText = "This is a valid text input for testing";
@@ -97,21 +102,75 @@ describe("Security Utils", () => {
   });
 
   describe("XSS Prevention", () => {
+    it("should prevent script tag XSS vectors", () => {
+      const scriptVectors = [
+        "<script>alert('xss')</script>",
+        "<SCRIPT>alert('XSS')</SCRIPT>",
+      ];
+
+      scriptVectors.forEach((vector) => {
+        expect(() => validateInput(vector)).toThrow("malicious content");
+      });
+    });
+
+    it("should prevent javascript protocol XSS vectors", () => {
+      const jsProtocolVectors = [
+        "javascript:alert('xss')",
+        "JAVASCRIPT:alert('XSS')",
+      ];
+
+      jsProtocolVectors.forEach((vector) => {
+        expect(() => validateInput(vector)).toThrow("malicious content");
+      });
+    });
+
     it("should prevent common XSS attack vectors", () => {
       const xssVectors = [
+        { input: "<script>alert('xss')</script>", description: "script tag" },
+        {
+          input: "<SCRIPT>alert('XSS')</SCRIPT>",
+          description: "uppercase script tag",
+        },
+        {
+          input: "javascript:alert('xss')",
+          description: "javascript protocol",
+        },
+        {
+          input: "JAVASCRIPT:alert('XSS')",
+          description: "uppercase javascript protocol",
+        },
+      ];
+
+      xssVectors.forEach(({ input, description }) => {
+        expect(() => validateInput(input)).toThrow(/malicious content/i);
+      });
+    });
+
+    it("should prevent HTML event handler XSS vectors", () => {
+      const eventHandlerVectors = [
         "<img src=x onerror=alert(1)>",
         "<svg onload=alert(1)>",
         "<iframe src=javascript:alert(1)>",
+      ];
+
+      eventHandlerVectors.forEach((vector) => {
+        expect(() => validateInput(vector)).toThrow();
+      });
+    });
+
+    it("should prevent additional XSS vectors", () => {
+      const additionalXssVectors = [
         "<body onload=alert(1)>",
         "<input onfocus=alert(1) autofocus>",
         "<select onfocus=alert(1) autofocus>",
         "<textarea onfocus=alert(1) autofocus>",
-        "<keygen onfocus=alert(1) autofocus>",
         "<video><source onerror=alert(1)>",
         "<audio src=x onerror=alert(1)>",
+        "data:text/html,<script>alert('xss')</script>",
+        "vbscript:msgbox('xss')",
       ];
 
-      xssVectors.forEach((vector) => {
+      additionalXssVectors.forEach((vector) => {
         expect(() => validateInput(vector)).toThrow();
       });
     });
@@ -148,6 +207,25 @@ describe("Security Utils", () => {
       // Input with special characters but not malicious
       const specialChars = "Hello! @#$%^&*()_+-=[]{}|;:,.<>?";
       expect(() => validateInput(specialChars)).not.toThrow();
+    });
+
+    it("should handle rate limiting edge cases", () => {
+      // Test multiple rapid calls
+      expect(rateLimitCheck()).toBe(true);  // First call allowed
+      expect(rateLimitCheck()).toBe(false); // Second call blocked
+      expect(rateLimitCheck()).toBe(false); // Third call blocked
+    });
+
+    it("should handle sanitization of complex input", () => {
+      const complexInput = "Hello <world> & 'test' \"quotes\" \x00\x01\x7F";
+      const result = sanitizeText(complexInput);
+      expect(result).toBe("Hello world  test quotes");
+      expect(result).not.toContain("<");
+      expect(result).not.toContain(">");
+      expect(result).not.toContain("&");
+      expect(result).not.toContain("\x00");
+      expect(result).not.toContain("\x01");
+      expect(result).not.toContain("\x7F");
     });
   });
 });

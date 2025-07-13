@@ -21,6 +21,9 @@ export const validateInput = (text: string): string => {
     /vbscript:/i,
     /onload=/i,
     /onerror=/i,
+    /onerror=/i,
+    /onfocus=/i,
+    /autofocus=/i,
   ];
 
   for (const pattern of suspiciousPatterns) {
