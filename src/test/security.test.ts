@@ -3,12 +3,26 @@ import {
   validateInput,
   sanitizeText,
   rateLimitCheck,
+  MAX_INPUT_LENGTH,
+  MAX_WORDS_PROCESSED,
 } from "../utils/securityUtils";
 
 describe("Security Utils", () => {
   // Reset any global state before each test
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe("Constants", () => {
+    it("should have correct MAX_INPUT_LENGTH", () => {
+      expect(MAX_INPUT_LENGTH).toBe(50000);
+      expect(typeof MAX_INPUT_LENGTH).toBe("number");
+    });
+
+    it("should have correct MAX_WORDS_PROCESSED", () => {
+      expect(MAX_WORDS_PROCESSED).toBe(10000);
+      expect(typeof MAX_WORDS_PROCESSED).toBe("number");
+    });
   });
 
   describe("validateInput", () => {
@@ -30,6 +44,12 @@ describe("Security Utils", () => {
       expect(() => validateInput(longText)).toThrow("Input too large");
     });
 
+    it("should accept input at maximum length boundary", () => {
+      const maxLengthText = "a".repeat(50000); // Exactly MAX_INPUT_LENGTH
+      expect(() => validateInput(maxLengthText)).not.toThrow();
+      expect(validateInput(maxLengthText)).toBe(maxLengthText);
+    });
+
     it("should detect and reject malicious script tags", () => {
       const maliciousInputs = [
         "<script>alert('xss')</script>",
@@ -49,10 +69,105 @@ describe("Security Utils", () => {
       });
     });
 
+    it("should detect all suspicious patterns individually", () => {
+      const suspiciousPatterns = [
+        "<script>test</script>",
+        "<SCRIPT>TEST</SCRIPT>",
+        "javascript:void(0)",
+        "JAVASCRIPT:ALERT(1)",
+        "data:text/html,<h1>test</h1>",
+        "DATA:TEXT/HTML,<H1>TEST</H1>",
+        "vbscript:msgbox('test')",
+        "VBSCRIPT:MSGBOX('TEST')",
+        "<img onload='test'>",
+        "<IMG ONLOAD='TEST'>",
+        "<div onerror='test'>",
+        "<DIV ONERROR='TEST'>",
+        "<input onfocus='test'>",
+        "<INPUT ONFOCUS='TEST'>",
+        "<select autofocus='true'>",
+        "<SELECT AUTOFOCUS='TRUE'>",
+      ];
+
+      suspiciousPatterns.forEach((pattern) => {
+        expect(() => validateInput(pattern)).toThrow(
+          "Input contains potentially malicious content"
+        );
+      });
+    });
+
     it("should allow legitimate text with numbers and punctuation", () => {
       const legitimateText =
         "Hello world! This is a test with numbers 123 and symbols @#$%";
       expect(() => validateInput(legitimateText)).not.toThrow();
+    });
+
+    it("should handle edge cases with whitespace", () => {
+      expect(() => validateInput("   ")).not.toThrow();
+      expect(() => validateInput("\t\n\r")).not.toThrow();
+      expect(validateInput("  hello  ")).toBe("  hello  ");
+    });
+
+    it("should handle input with false positives", () => {
+      // These should NOT trigger false positives
+      const safeInputs = [
+        "I love JavaScript programming",
+        "Check out this data visualization",
+        "The script was well written",
+        "She focused on the task",
+        "The error was corrected",
+        "Load the new content",
+      ];
+
+      safeInputs.forEach((input) => {
+        expect(() => validateInput(input)).not.toThrow();
+      });
+    });
+
+    it("should handle boolean and object inputs", () => {
+      expect(() => validateInput(true as any)).toThrow("Invalid input");
+      expect(() => validateInput(false as any)).toThrow("Invalid input");
+      expect(() => validateInput({} as any)).toThrow("Invalid input");
+      expect(() => validateInput([] as any)).toThrow("Invalid input");
+    });
+
+    it("should handle whitespace-only input", () => {
+      expect(() => validateInput(" ")).not.toThrow();
+      expect(() => validateInput("\n")).not.toThrow();
+      expect(() => validateInput("\t")).not.toThrow();
+      expect(() => validateInput("\r")).not.toThrow();
+    });
+
+    it("should provide specific error messages", () => {
+      expect(() => validateInput("")).toThrow(
+        "Invalid input: text must be a non-empty string"
+      );
+      expect(() => validateInput("a".repeat(50001))).toThrow(
+        "Input too large: maximum 50000 characters allowed"
+      );
+      expect(() => validateInput("<script>")).toThrow(
+        "Input contains potentially malicious content"
+      );
+    });
+
+    it("should test all suspicious patterns in the for loop", () => {
+      // This test ensures we hit every pattern in the suspiciousPatterns array
+      const patterns = [
+        { test: "<script", pattern: "script" },
+        { test: "javascript:", pattern: "javascript protocol" },
+        { test: "data:", pattern: "data protocol" },
+        { test: "vbscript:", pattern: "vbscript protocol" },
+        { test: "onload=", pattern: "onload event" },
+        { test: "onerror=", pattern: "onerror event" },
+        { test: "onfocus=", pattern: "onfocus event" },
+        { test: "autofocus=", pattern: "autofocus attribute" },
+      ];
+
+      patterns.forEach(({ test, pattern }) => {
+        expect(() => validateInput(`test ${test} content`)).toThrow(
+          "Input contains potentially malicious content"
+        );
+      });
     });
   });
 
@@ -79,6 +194,57 @@ describe("Security Utils", () => {
       expect(sanitizeText("")).toBe("");
       expect(sanitizeText("   ")).toBe("");
     });
+
+    it("should remove all HTML/XML special characters individually", () => {
+      expect(sanitizeText("test<")).toBe("test");
+      expect(sanitizeText("test>")).toBe("test");
+      expect(sanitizeText("test'")).toBe("test");
+      expect(sanitizeText('test"')).toBe("test");
+      expect(sanitizeText("test&")).toBe("test");
+    });
+
+    it("should remove various control characters", () => {
+      // Test different control characters (\x00-\x1F and \x7F)
+      const controlChars = [
+        "\x00", // null
+        "\x01", // start of heading
+        "\x02", // start of text
+        "\x08", // backspace
+        "\x09", // tab
+        "\x0A", // line feed
+        "\x0D", // carriage return
+        "\x1F", // unit separator
+        "\x7F", // delete
+      ];
+
+      controlChars.forEach((char) => {
+        const input = `hello${char}world`;
+        const result = sanitizeText(input);
+        expect(result).toBe("helloworld");
+      });
+    });
+
+    it("should preserve normal text while removing dangerous content", () => {
+      const input = "Normal text 123 with spaces & special chars";
+      const result = sanitizeText(input);
+      expect(result).toBe("Normal text 123 with spaces  special chars");
+    });
+
+    it("should handle complex sanitization scenarios", () => {
+      // Test multiple replace operations in sequence
+      const testCases = [
+        { input: "", expected: "" },
+        { input: "   ", expected: "" },
+        { input: "<>&'\"", expected: "" },
+        { input: "\x00\x01\x1F\x7F", expected: "" },
+        { input: "  <test>  ", expected: "test" },
+        { input: "mix&ed<>content'\"\x00\x7F", expected: "mixedcontent" },
+      ];
+
+      testCases.forEach(({ input, expected }) => {
+        expect(sanitizeText(input)).toBe(expected);
+      });
+    });
   });
 
   describe("rateLimitCheck", () => {
@@ -104,6 +270,36 @@ describe("Security Utils", () => {
       await new Promise((resolve) => setTimeout(resolve, 110));
 
       expect(rateLimitCheck()).toBe(true); // Should be allowed
+    });
+
+    it("should handle multiple rapid blocking attempts", async () => {
+      // Wait to ensure clean state
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // First call should be allowed
+      expect(rateLimitCheck()).toBe(true);
+
+      // Multiple rapid calls should all be blocked
+      expect(rateLimitCheck()).toBe(false);
+      expect(rateLimitCheck()).toBe(false);
+      expect(rateLimitCheck()).toBe(false);
+      expect(rateLimitCheck()).toBe(false);
+    });
+
+    it("should reset properly after the minimum interval", async () => {
+      // Wait to ensure clean state
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // First request
+      expect(rateLimitCheck()).toBe(true);
+      expect(rateLimitCheck()).toBe(false); // Blocked
+
+      // Wait exactly the minimum interval
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Should be allowed again
+      expect(rateLimitCheck()).toBe(true);
+      expect(rateLimitCheck()).toBe(false); // Next one blocked again
     });
   });
 
