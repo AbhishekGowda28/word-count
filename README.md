@@ -9,6 +9,7 @@ A beautiful Next.js application that generates word clouds from your text input.
 - 🎨 Beautiful, responsive design
 - 🚀 Optimized for GitHub Pages deployment
 - 📱 Mobile-friendly interface
+- 🧪 Comprehensive test coverage with Vitest
 
 ## How to Use
 
@@ -33,21 +34,65 @@ npm run build
 npm run export
 ```
 
+## Testing
+
+This project uses Vitest for testing with comprehensive coverage:
+
+```bash
+# Run all tests
+npm test
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run tests in watch mode
+npm test -- --watch
+```
+
+### Test Coverage
+
+- **Unit Tests**: Test individual utility functions (word processing, canvas operations)
+- **Component Tests**: Test React components with user interactions
+- **Integration Tests**: Test complete workflows and edge cases
+- **Canvas Mocking**: Mock HTML5 Canvas API for reliable testing
+
 ## Deployment
 
-This app is configured for automatic deployment to GitHub Pages using GitHub Actions. Simply push to the main branch and the workflow will:
+This app is configured for automatic deployment to GitHub Pages using GitHub Actions. The workflow includes:
 
-1. Build the Next.js application
-2. Export static files
-3. Deploy to GitHub Pages
+1. **Test Stage**: Runs all tests and generates coverage reports
+2. **Build Stage**: Builds the Next.js application (only if tests pass)
+3. **Deploy Stage**: Exports static files and deploys to GitHub Pages
+
+Simply push to the main branch and the workflow will handle everything automatically.
 
 ## Technologies Used
 
 - Next.js 14
 - React 18
 - TypeScript
+- Vitest for testing
+- Testing Library for component testing
 - HTML5 Canvas for word cloud rendering
 - CSS Grid and Flexbox for responsive layout
+
+## Project Structure
+
+```
+src/
+├── utils/
+│   ├── wordUtils.ts      # Word processing logic
+│   └── canvasUtils.ts    # Canvas drawing utilities
+└── test/
+    ├── setup.ts          # Test configuration
+    ├── wordUtils.test.ts  # Unit tests for word processing
+    ├── canvasUtils.test.ts # Unit tests for canvas operations
+    ├── Home.test.tsx     # Component tests
+    └── integration.test.ts # Integration tests
+```
 
 ## Live Demo
 
