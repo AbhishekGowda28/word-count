@@ -3,32 +3,46 @@
 import { useState, useRef } from "react";
 import { processText, WordFrequency } from "@/src/utils/wordUtils";
 import { drawWordCloud } from "@/src/utils/canvasUtils";
+import { MAX_INPUT_LENGTH } from "@/src/utils/securityUtils";
 
 export default function Home() {
   const [inputText, setInputText] = useState("");
   const [wordFrequencies, setWordFrequencies] = useState<WordFrequency[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const generateWordCloud = () => {
     if (!inputText.trim()) return;
 
     setIsGenerating(true);
+    setError(null);
 
-    // Process text and generate word frequencies
-    const frequencies = processText(inputText);
-    setWordFrequencies(frequencies);
+    try {
+      // Process text and generate word frequencies
+      const frequencies = processText(inputText);
+      setWordFrequencies(frequencies);
 
-    // Generate canvas-based word cloud
-    setTimeout(() => {
-      drawWordCloud(canvasRef.current, frequencies);
+      // Generate canvas-based word cloud
+      setTimeout(() => {
+        drawWordCloud(canvasRef.current, frequencies);
+        setIsGenerating(false);
+      }, 100);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "An error occurred while processing text"
+      );
       setIsGenerating(false);
-    }, 100);
+      setWordFrequencies([]);
+    }
   };
 
   const clearWordCloud = () => {
     setInputText("");
     setWordFrequencies([]);
+    setError(null);
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext("2d");
@@ -37,6 +51,18 @@ export default function Home() {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+
+    // Clear error when user starts typing again
+    if (error) setError(null);
+
+    // Prevent input beyond maximum length
+    if (value.length <= MAX_INPUT_LENGTH) {
+      setInputText(value);
     }
   };
 
@@ -50,16 +76,72 @@ export default function Home() {
       <div className="input-section">
         <textarea
           className="textarea"
-          placeholder="Enter your text here... The more words you add, the better your word cloud will look!"
+          placeholder={`Enter your text here... (Maximum ${MAX_INPUT_LENGTH.toLocaleString()} characters)`}
           value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
+          onChange={handleInputChange}
           data-testid="text-input"
+          maxLength={MAX_INPUT_LENGTH}
         />
-        <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "0.5rem",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.9rem",
+              color: "#666",
+            }}
+          >
+            {inputText.length.toLocaleString()} /{" "}
+            {MAX_INPUT_LENGTH.toLocaleString()} characters
+          </span>
+          {inputText.length > MAX_INPUT_LENGTH * 0.9 && (
+            <span
+              style={{
+                fontSize: "0.9rem",
+                color: "#f5576c",
+              }}
+            >
+              Approaching character limit
+            </span>
+          )}
+        </div>
+
+        {error && (
+          <div
+            style={{
+              background: "#fee",
+              color: "#c33",
+              padding: "1rem",
+              borderRadius: "8px",
+              marginTop: "1rem",
+              border: "1px solid #fcc",
+            }}
+          >
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+
+        <div
+          style={{
+            display: "flex",
+            gap: "1rem",
+            marginTop: "1rem",
+          }}
+        >
           <button
             className="button"
             onClick={generateWordCloud}
-            disabled={!inputText.trim() || isGenerating}
+            disabled={
+              !inputText.trim() ||
+              isGenerating ||
+              inputText.length > MAX_INPUT_LENGTH
+            }
             data-testid="generate-button"
           >
             {isGenerating ? "Generating..." : "Generate Word Cloud"}

@@ -1,3 +1,10 @@
+import {
+  validateInput,
+  sanitizeText,
+  rateLimitCheck,
+  MAX_WORDS_PROCESSED,
+} from "./securityUtils";
+
 // Define types for word frequency
 export interface WordFrequency {
   text: string;
@@ -6,29 +13,51 @@ export interface WordFrequency {
 }
 
 export const processText = (text: string): WordFrequency[] => {
-  if (!text.trim()) return [];
+  try {
+    // Security validations
+    if (!rateLimitCheck()) {
+      throw new Error(
+        "Processing rate limit exceeded. Please wait before trying again."
+      );
+    }
 
-  // Convert to lowercase and remove punctuation
-  const words = text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, " ")
-    .split(/\s+/)
-    .filter((word) => word.length > 2); // Filter out very short words
+    const validatedText = validateInput(text);
+    if (!validatedText.trim()) return [];
 
-  // Count word frequencies
-  const wordCount: { [key: string]: number } = {};
-  words.forEach((word) => {
-    wordCount[word] = (wordCount[word] || 0) + 1;
-  });
+    const sanitizedText = sanitizeText(validatedText);
 
-  // Convert to array and sort by frequency
-  const frequencies = Object.entries(wordCount)
-    .map(([text, weight]) => ({
-      text,
-      size: Math.min(Math.max(weight * 20, 20), 80), // Scale size between 20-80px
-      weight,
-    }))
-    .sort((a, b) => b.weight - a.weight);
+    // Convert to lowercase and remove punctuation
+    const words = sanitizedText
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ")
+      .split(/\s+/)
+      .filter((word) => word.length > 2); // Filter out very short words
 
-  return frequencies;
+    // Security: Limit number of words processed
+    if (words.length > MAX_WORDS_PROCESSED) {
+      throw new Error(
+        `Too many words to process. Maximum ${MAX_WORDS_PROCESSED} words allowed.`
+      );
+    }
+
+    // Count word frequencies
+    const wordCount: { [key: string]: number } = {};
+    words.forEach((word) => {
+      wordCount[word] = (wordCount[word] || 0) + 1;
+    });
+
+    // Convert to array and sort by frequency
+    const frequencies = Object.entries(wordCount)
+      .map(([text, weight]) => ({
+        text,
+        size: Math.min(Math.max(weight * 20, 20), 80), // Scale size between 20-80px
+        weight,
+      }))
+      .sort((a, b) => b.weight - a.weight);
+
+    return frequencies;
+  } catch (error) {
+    console.error("Error processing text:", error);
+    throw error;
+  }
 };

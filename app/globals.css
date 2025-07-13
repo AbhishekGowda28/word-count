@@ -126,3 +126,24 @@ body {
   color: #666;
   font-weight: 500;
 }
+
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  border: 1px solid #fcc;
+}
+
+.character-counter {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.character-warning {
+  font-size: 0.9rem;
+  color: #f5576c;
+  font-weight: 500;
+}
