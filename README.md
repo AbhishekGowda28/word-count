@@ -96,7 +96,7 @@ src/
 
 ## Live Demo
 
-Visit the live application at: `https://yourusername.github.io/word-count/`
+Visit the live application at: `https://abhishekgowda28.github.io/word-count/`
 
 ## License
 
